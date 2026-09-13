@@ -1,0 +1,84 @@
+# Render Blueprint for AccessSlot
+# This file configures automatic deployment of the entire AccessSlot project
+
+databases:
+  - name: accessslot-db
+    databaseName: accessslot_db
+    user: accessslot_user
+    plan: free
+    region: oregon
+
+services:
+  # Backend Django API
+  - type: web
+    name: accessslot-backend
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
+    startCommand: gunicorn accessslot.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60 --access-logfile - --error-logfile -
+    healthCheckPath: /api/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DEBUG
+        value: False
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        fromService:
+          type: web
+          name: accessslot-backend
+          property: host
+      - key: DB_NAME
+        fromDatabase:
+          name: accessslot-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: accessslot-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: accessslot-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: accessslot-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: accessslot-db
+          property: port
+      - key: JWT_ACCESS_TOKEN_LIFETIME
+        value: 60
+      - key: JWT_REFRESH_TOKEN_LIFETIME
+        value: 1440
+      - key: SECURE_SSL_REDIRECT
+        value: False
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+        # This will need to be set manually after frontend deployment or via dashboard
+
+  # Frontend React Static Site
+  - type: web
+    name: accessslot-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 20.20.2
+      - key: VITE_API_BASE_URL
+        sync: false
+        # Set this manually to: https://accessslot-backend.onrender.com/api
