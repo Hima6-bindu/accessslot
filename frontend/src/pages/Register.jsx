@@ -11,7 +11,7 @@ const Register = () => {
     username: '',
     email: '',
     password: '',
-    password2: '',
+    password_confirm: '',
     first_name: '',
     last_name: '',
     role: 'STUDENT',
@@ -32,7 +32,7 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
-    if (formData.password !== formData.password2) {
+    if (formData.password !== formData.password_confirm) {
       setError('Passwords do not match');
       return;
     }
@@ -159,12 +159,12 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="password2">Confirm Password</label>
+              <label htmlFor="password_confirm">Confirm Password</label>
               <input
-                id="password2"
-                name="password2"
+                id="password_confirm"
+                name="password_confirm"
                 type="password"
-                value={formData.password2}
+                value={formData.password_confirm}
                 onChange={handleChange}
                 required
                 disabled={loading}
