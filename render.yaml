@@ -19,7 +19,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
     startCommand: gunicorn accessslot.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60 --access-logfile - --error-logfile -
-    healthCheckPath: /api/
+    healthCheckPath: /api/health/
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
