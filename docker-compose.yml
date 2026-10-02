@@ -1,0 +1,94 @@
+# =============================================================================
+# docker-compose.yml — Local integration testing only
+#
+# This file is NOT used in production.
+# Render builds each service independently from its own Dockerfile.
+#
+# Usage:
+#   cp backend/.env.example backend/.env   # fill in values
+#   docker compose up --build
+#
+# Services:
+#   db       — PostgreSQL 16 (local only, Render provides managed DB)
+#   backend  — Django + gunicorn on http://localhost:8000
+#   frontend — nginx serving React build on http://localhost:3000
+# =============================================================================
+
+services:
+
+  # ── PostgreSQL database (local only) ─────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: accessslot_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-accessslot_db}
+      POSTGRES_USER: ${DB_USER:-accessslot_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-localpassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-accessslot_user} -d ${DB_NAME:-accessslot_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Django backend ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: accessslot_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Django core
+      SECRET_KEY: ${SECRET_KEY:-local-dev-secret-key-change-in-production}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      # Database — points to the db service above
+      DB_NAME: ${DB_NAME:-accessslot_db}
+      DB_USER: ${DB_USER:-accessslot_user}
+      DB_PASSWORD: ${DB_PASSWORD:-localpassword}
+      DB_HOST: db
+      DB_PORT: 5432
+      # JWT
+      JWT_ACCESS_TOKEN_LIFETIME: ${JWT_ACCESS_TOKEN_LIFETIME:-60}
+      JWT_REFRESH_TOKEN_LIFETIME: ${JWT_REFRESH_TOKEN_LIFETIME:-1440}
+      # CORS — allow the frontend container
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}
+      # Security — disable SSL redirect for local HTTP
+      SECURE_SSL_REDIRECT: "False"
+      PORT: 8000
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── React frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time API URL — points to the backend on the host machine.
+        # Use localhost here because the browser (not nginx) makes the API calls.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api}
+    container_name: accessslot_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

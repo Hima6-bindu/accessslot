@@ -1,5 +1,14 @@
+# =============================================================================
 # Render Blueprint for AccessSlot
-# This file configures automatic deployment of the entire AccessSlot project
+#
+# Deployment strategy:
+#   Backend  → Docker Web Service (builds from backend/Dockerfile)
+#   Frontend → Static Site (builds with Vite, served via Render CDN)
+#   Database → Render managed PostgreSQL (free tier)
+#
+# IMPORTANT — values marked "sync: false" must be set manually in
+# the Render dashboard after the services are created.
+# =============================================================================
 
 databases:
   - name: accessslot-db
@@ -9,25 +18,25 @@ databases:
     region: oregon
 
 services:
-  # Backend Django API
+
+  # ── Backend: Docker Web Service ───────────────────────────────────────────
   - type: web
     name: accessslot-backend
-    runtime: python
+    runtime: docker
     region: oregon
     plan: free
     branch: main
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
-    startCommand: gunicorn accessslot.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60 --access-logfile - --error-logfile -
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health/
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
-      - key: DEBUG
-        value: False
       - key: SECRET_KEY
         generateValue: true
+      - key: DEBUG
+        value: "False"
       - key: ALLOWED_HOSTS
+        # After deploy, add your actual Render hostname here.
+        # Format: accessslot-backend.onrender.com,localhost,127.0.0.1
         value: accessslot-backend.onrender.com,localhost,127.0.0.1
       - key: DB_NAME
         fromDatabase:
@@ -50,19 +59,29 @@ services:
           name: accessslot-db
           property: port
       - key: JWT_ACCESS_TOKEN_LIFETIME
-        value: 60
+        value: "60"
       - key: JWT_REFRESH_TOKEN_LIFETIME
-        value: 1440
+        value: "1440"
       - key: SECURE_SSL_REDIRECT
-        value: False
+        # Must be False — Render terminates TLS at the proxy layer.
+        # Setting True would cause redirect loops.
+        value: "False"
       - key: CORS_ALLOWED_ORIGINS
+        # Set this AFTER the frontend is deployed.
+        # Value: https://accessslot-frontend.onrender.com
         sync: false
-        # This will need to be set manually after frontend deployment or via dashboard
 
-  # Frontend React Static Site
+  # ── Frontend: Static Site ─────────────────────────────────────────────────
+  # Render builds the Vite app and serves the dist/ folder via its global CDN.
+  # This is preferred over a Docker container for a static site:
+  #   - Free tier
+  #   - Global CDN edge delivery
+  #   - Automatic HTTPS
+  #   - Zero container overhead
   - type: web
     name: accessslot-frontend
     runtime: static
+    region: oregon
     branch: main
     rootDir: frontend
     buildCommand: npm ci && npm run build
@@ -73,7 +92,8 @@ services:
         destination: /index.html
     envVars:
       - key: NODE_VERSION
-        value: 20.20.2
+        value: "22"
       - key: VITE_API_BASE_URL
+        # Set this to your backend URL BEFORE the first deploy.
+        # Value: https://accessslot-backend.onrender.com/api
         sync: false
-        # Set this manually to: https://accessslot-backend.onrender.com/api

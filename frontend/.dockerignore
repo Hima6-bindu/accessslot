@@ -1,0 +1,36 @@
+# =============================================================================
+# frontend/.dockerignore — Exclude files from the Docker build context
+# =============================================================================
+
+# Dependencies (installed fresh in the container)
+node_modules/
+
+# Build output (generated fresh in the container)
+dist/
+
+# Environment files — NEVER copy secrets into images
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md
+PHASE_*.md
+
+# Lint config (not needed in image)
+.oxlintrc.json
+
+# Test artifacts
+coverage/

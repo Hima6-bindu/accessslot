@@ -1,0 +1,59 @@
+# =============================================================================
+# backend/.dockerignore — Exclude files from the Docker build context
+# =============================================================================
+
+# Environment files — NEVER copy secrets into images
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+
+# Django generated files (built fresh in the container)
+staticfiles/
+media/
+
+# SQLite (not used in production)
+db.sqlite3
+*.sqlite3
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md
+DEPLOYMENT*.md
+PHASE_*.md
+POSTGRESQL_*.md
+
+# Scripts
+setup.ps1
+reset_postgres_password.ps1
