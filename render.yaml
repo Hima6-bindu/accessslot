@@ -35,9 +35,8 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        # After deploy, add your actual Render hostname here.
-        # Format: accessslot-backend.onrender.com,localhost,127.0.0.1
-        value: accessslot-backend.onrender.com,localhost,127.0.0.1
+        # .onrender.com wildcard covers all Render subdomains regardless of suffix
+        value: .onrender.com,localhost,127.0.0.1
       - key: DB_NAME
         fromDatabase:
           name: accessslot-db
