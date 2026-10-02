@@ -178,6 +178,11 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv()
 )
 
+# Also allow any onrender.com subdomain (covers Render's random suffixes)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://.*\.onrender\.com$',
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = [
